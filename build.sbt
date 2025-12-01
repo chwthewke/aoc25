@@ -21,31 +21,47 @@ val aggregateSettings = Seq(
   publishLocal := {}
 )
 
-val `advent-of-code-core` = project
-  .in( file( "core" ) )
+val `advent-of-code-lib` = project
+  .in( file( "lib" ) )
+  .settings( sharedSettings )
+  .settings( cats, catsEffectKernel, catsParse )
+  .enablePlugins( Scalac )
+
+val `advent-of-code-shell` = project
+  .in( file( "shell" ) )
   .settings( sharedSettings )
   .settings( cats, catsEffect )
   .enablePlugins( Scalac )
+
+val `advent-of-code-2025` = project
+  .in( file( "2025" ) )
+  .settings( sharedSettings )
+  .settings( cats, catsEffect, alleycats )
+  .enablePlugins( Scalac )
+  .dependsOn( `advent-of-code-lib`, `advent-of-code-shell` )
 
 val `advent-of-code-app` = project
   .in( file( "app" ) )
   .settings( sharedSettings )
   .settings( Compile / run / fork := true )
-  .dependsOn( `advent-of-code-core` )
+  .settings( fs2IO )
+  .dependsOn( `advent-of-code-2025` )
   .enablePlugins( Scalac, BuildInfo )
 
 val `advent-of-code-tests` = project
   .in( file( "tests" ) )
   .settings( sharedSettings )
   .settings( scalatest, scalacheck )
-  .dependsOn( `advent-of-code-core`, `advent-of-code-app` )
+  .dependsOn( `advent-of-code-2025`, `advent-of-code-app` )
   .enablePlugins( Scalac )
 
 val `advent-of-code` = project
   .in( file( "." ) )
   .settings( sharedSettings, aggregateSettings )
   .aggregate(
-    `advent-of-code-core`,
+    `advent-of-code-lib`,
+    `advent-of-code-shell`,
+    `advent-of-code-2025`,
     `advent-of-code-app`,
     `advent-of-code-tests`
   )

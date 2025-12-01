@@ -27,7 +27,7 @@ object Dependencies extends AutoPlugin {
 
     val algebra: Deps = libraryDependencies += "org.typelevel" %%% "algebra" % "2.13.0"
 
-    val catsEffectVersion: String = "3.6.1"
+    val catsEffectVersion: String = "3.6.3"
     val catsEffectKernel: Deps    = libraryDependencies += "org.typelevel" %%% "cats-effect-kernel" % catsEffectVersion
     val catsEffect: Deps          = libraryDependencies += "org.typelevel" %%% "cats-effect"        % catsEffectVersion
 
@@ -124,7 +124,7 @@ object Dependencies extends AutoPlugin {
     )
 
     val scalacheck: Deps = libraryDependencies ++= Seq(
-      "org.scalacheck"    %% "scalacheck"      % "1.18.1",
+      "org.scalacheck"    %% "scalacheck"      % "1.19.0",
       "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2"
     )
 
