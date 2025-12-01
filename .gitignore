@@ -9,3 +9,5 @@ target/
 .classpath
 .settings
 .scalafmt.conf
+
+2025/src/main/resources/
