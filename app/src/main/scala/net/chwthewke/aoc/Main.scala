@@ -6,7 +6,7 @@ import cats.effect.IOApp
 
 object Main extends IOApp:
 
-  private val puzzles: Vector[Puzzle.Any] = Vector(  )
+  private val puzzles: Vector[Puzzle.Any] = Vector( Puzzle1 )
 
   private case class Args( number: Int, useSample: Boolean, runBonus: Boolean )
 
