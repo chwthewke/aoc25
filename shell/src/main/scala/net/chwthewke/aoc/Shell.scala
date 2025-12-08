@@ -3,8 +3,9 @@ package net.chwthewke.aoc
 import cats.Id
 import cats.Monad
 import cats.Show
+import cats.data.Kleisli
 import cats.effect.IO
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 trait Shell:
   type In
@@ -24,6 +25,7 @@ trait Shell:
   def reads[I]( read: Shell.Read[I] ): Shell.Aux[Effect, I, Out, Error]
   def withTimeout( timeout: Duration ): Shell.Aux[Effect, In, Out, Error]
   def withBonusInput: Shell.Aux[Effect, In, Out, Error]
+  def sampleAware: Shell.Aux[Kleisli[Effect, Shell.IsSample, *], In, Out, Error]
 
 object Shell:
   class Impl[F[_], I, O, E](
@@ -42,13 +44,16 @@ object Shell:
 
     override lazy val monadInstance: Monad[F] = M
 
-    override def returns[O1: Show]: Aux[F, I, O1, E] = new Impl( read, eff, timeout, false )
+    override def returns[O1: Show]: Aux[F, I, O1, E] = new Impl( read, eff, timeout, hasBonusInput )
 
-    override def reads[I1]( read1: Read[I1] ): Aux[F, I1, O, E] = new Impl( read1, eff, timeout, false )
+    override def reads[I1]( read1: Read[I1] ): Aux[F, I1, O, E] = new Impl( read1, eff, timeout, hasBonusInput )
 
-    override def withTimeout( timeout1: Duration ): Aux[F, I, O, E] = new Impl( read, eff, timeout1, false )
+    override def withTimeout( timeout1: Duration ): Aux[F, I, O, E] = new Impl( read, eff, timeout1, hasBonusInput )
 
     override def withBonusInput: Aux[F, I, O, E] = new Impl( read, eff, timeout, true )
+
+    override def sampleAware: Aux[Kleisli[F, IsSample, *], I, O, E] =
+      new Impl( read, Eff.SampleAware( eff ), timeout, hasBonusInput )
 
   type Aux[F[_], I, O, E] = Shell { type In = I; type Out = O; type Effect = F; type Error = E }
 
@@ -63,6 +68,10 @@ object Shell:
 
   val io: Shell.Aux[IO, Vector[String], Int, Throwable] = withEffect( Eff.IOEff )
 
+  enum IsSample:
+    case Sample
+    case Real
+
   sealed abstract class Eff[F[_], -E]( using val F: Monad[F] ):
     def raise[A]( e: E ): F[A]
 
@@ -73,6 +82,8 @@ object Shell:
       override def raise[A]( e: String ): Either[String, A] = Left( e )
     object IOEff extends Eff[IO, Throwable]:
       override def raise[A]( e: Throwable ): IO[A] = IO.raiseError( e )
+    case class SampleAware[F[_]: Monad, -E]( inner: Eff[F, E] ) extends Eff[Kleisli[F, IsSample, *], E]:
+      override def raise[A]( e: E ): Kleisli[F, IsSample, A] = Kleisli.liftF( inner.raise( e ) )
 
   sealed trait Read[I]
   object Read:

@@ -3,6 +3,7 @@ package net.chwthewke.aoc
 import cats.Id
 import cats.Show
 import cats.arrow.FunctionK
+import cats.data.Kleisli
 import cats.effect.Clock
 import cats.effect.IO
 import cats.effect.std.Console
@@ -17,7 +18,7 @@ object Runner:
   private val clock: Clock[IO]     = Clock[IO]
   private val console: Console[IO] = Console[IO]
 
-  private def nat[F[_], E]( eff: Eff[F, E] ): F ~> IO =
+  private def nat[F[_], E]( eff: Eff[F, E], useSample: Boolean ): F ~> IO =
     eff match
       case Eff.EitherEff =>
         new FunctionK[Either[String, *], IO]:
@@ -27,6 +28,13 @@ object Runner:
       case Eff.IdEff =>
         new FunctionK[Id, IO]:
           override def apply[A]( fa: A ): IO[A] = IO.delay( fa )
+      case Eff.SampleAware( inner ) =>
+        nat1( inner, useSample )
+
+  private def nat1[F[_], E]( eff: Eff[F, E], useSample: Boolean ): Kleisli[F, Shell.IsSample, *] ~> IO =
+    new FunctionK[Kleisli[F, Shell.IsSample, *], IO]:
+      override def apply[A]( fa: Kleisli[F, Shell.IsSample, A] ): IO[A] =
+        nat( eff, useSample )( fa( if ( useSample ) Shell.IsSample.Sample else Shell.IsSample.Real ) )
 
   private def onInput[F[_], I, O]( run: I => F[O], read: Read[I] )( input: Input ): F[O] =
     read match
@@ -53,7 +61,7 @@ object Runner:
       t0     <- clock.monotonic
       input  <- Loader.load[IO]( source, inputName )
       t1     <- clock.monotonic
-      output <- nat( puzzle.shell.eff )( onInput( task, puzzle.shell.read )( input ) )
+      output <- nat( puzzle.shell.eff, useSample )( onInput( task, puzzle.shell.read )( input ) )
       t2     <- clock.monotonic
       _      <- console.errorln(
              show"[${( t2 - t0 ).toMillis}ms] [setup=${( t1 - t0 ).toMillis}ms] [run=${( t2 - t1 ).toMillis}ms]"
